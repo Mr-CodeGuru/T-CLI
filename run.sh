@@ -10,18 +10,19 @@ while [ -h "$SOURCE" ]; do
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR"
+echo "📂 Working directory: $(pwd)"
 
 # 1. Check & Install Node.js Dependencies
 if [ ! -d "node_modules" ]; then
     echo "📦 First run detected: Installing Node.js dependencies..."
-    npm install --silent
+    npm install
     echo "✅ Node dependencies installed."
 fi
 
 # 2. Check & Build Frontend
 if [ ! -d "dist" ]; then
     echo "🔨 Building frontend..."
-    npm run build --silent
+    npm run build
     echo "✅ Frontend built."
 fi
 
@@ -30,7 +31,7 @@ if [ ! -d "backend/.venv" ]; then
     echo "🐍 First run detected: Setting up Python backend environment..."
     python3 -m venv backend/.venv
     source backend/.venv/bin/activate
-    pip install -r backend/requirements.txt --quiet
+    pip install -r backend/requirements.txt
     deactivate
     echo "✅ Python backend ready."
 fi
