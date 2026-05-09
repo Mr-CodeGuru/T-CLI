@@ -1,5 +1,5 @@
 import {useState, useCallback} from 'react';
-import {getDb} from '../db/index.js';
+import {getQuota, upsertQuota, getAllQuota} from '../db/index.js';
 import type {QuotaRecord, SessionQuota, Provider} from '../types/index.js';
 import {logger} from '../utils/logger.js';
 
@@ -45,29 +45,29 @@ export function useQuota(): UseQuotaReturn {
 				latencyMs: [...prev.latencyMs, latencyMs],
 			}));
 
-			// Persist to DB
+			// Persist to JSON DB
 			try {
-				const db = getDb();
 				const date = new Date().toISOString().split('T')[0]!;
-				const existing = db
-					.prepare(
-						'SELECT id FROM quota WHERE provider=? AND model=? AND date=?',
-					)
-					.get(provider, model, date) as {id: number} | undefined;
+				const existing = getQuota(date, provider);
 
-				if (existing) {
-					db.prepare(
-						`UPDATE quota SET prompt_tokens = prompt_tokens + ?,
-             completion_tokens = completion_tokens + ?,
-             reasoning_tokens = COALESCE(reasoning_tokens, 0) + ?,
-             requests = requests + 1
-             WHERE id = ?`,
-					).run(promptTokens, completionTokens, reasoningTokens || 0, existing.id);
+				if (existing && existing.model === model) {
+					upsertQuota({
+						...existing,
+						promptTokens: existing.promptTokens + promptTokens,
+						completionTokens: existing.completionTokens + completionTokens,
+						reasoningTokens: (existing.reasoningTokens || 0) + (reasoningTokens || 0),
+						requests: existing.requests + 1
+					});
 				} else {
-					db.prepare(
-						`INSERT INTO quota(provider, model, prompt_tokens, completion_tokens, reasoning_tokens, requests, date)
-             VALUES (?, ?, ?, ?, ?, 1, ?)`,
-					).run(provider, model, promptTokens, completionTokens, reasoningTokens || 0, date);
+					upsertQuota({
+						provider,
+						model,
+						promptTokens,
+						completionTokens,
+						reasoningTokens: reasoningTokens || 0,
+						requests: 1,
+						date
+					});
 				}
 			} catch (e) {
 				logger.error('quota persist failed', e);
@@ -78,35 +78,8 @@ export function useQuota(): UseQuotaReturn {
 
 	const loadAllTime = useCallback(() => {
 		try {
-			const db = getDb();
-			const rows = db
-				.prepare(
-					`SELECT provider, model,
-            SUM(prompt_tokens) as prompt_tokens,
-            SUM(completion_tokens) as completion_tokens,
-            SUM(requests) as requests,
-            MAX(date) as date
-           FROM quota GROUP BY provider, model ORDER BY date DESC`,
-				)
-				.all() as Array<{
-				provider: string;
-				model: string;
-				prompt_tokens: number;
-				completion_tokens: number;
-				requests: number;
-				date: string;
-			}>;
-			setAllTimeQuota(
-				rows.map(r => ({
-					provider: r.provider as Provider,
-					model: r.model,
-					promptTokens: r.prompt_tokens,
-					completionTokens: r.completion_tokens,
-					reasoningTokens: (r as any).reasoning_tokens || 0,
-					requests: r.requests,
-					date: r.date,
-				})),
-			);
+			const rows = getAllQuota();
+			setAllTimeQuota(rows);
 		} catch (e) {
 			logger.error('loadAllTime quota failed', e);
 		}

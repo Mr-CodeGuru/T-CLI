@@ -1,86 +1,124 @@
-import Database from 'better-sqlite3';
+import fs from 'fs';
 import {PATHS} from '../utils/paths.js';
 import {logger} from '../utils/logger.js';
+import type {Session, ChatMessage, Provider, QuotaRecord} from '../types/index.js';
 
-let _db: Database.Database | null = null;
+/**
+ * Pure JS JSON Database Implementation
+ * Replaces better-sqlite3 to avoid native compilation issues on new Node versions.
+ */
 
-export function getDb(): Database.Database {
+interface DbSchema {
+	sessions: Session[];
+	messages: Record<string, ChatMessage[]>; // session_id -> messages
+	quota: QuotaRecord[];
+	config: Record<string, string>;
+}
+
+let _db: DbSchema | null = null;
+
+function loadDb(): DbSchema {
 	if (_db) return _db;
+	
+	const path = PATHS.db.replace('.db', '.json');
+	try {
+		if (fs.existsSync(path)) {
+			const data = fs.readFileSync(path, 'utf8');
+			_db = JSON.parse(data);
+		}
+	} catch (e) {
+		logger.error('Failed to load JSON DB', e);
+	}
 
-	_db = new Database(PATHS.db);
-	_db.pragma('journal_mode = WAL');
-	_db.pragma('foreign_keys = ON');
-	migrate(_db);
+	if (!_db) {
+		_db = {
+			sessions: [],
+			messages: {},
+			quota: [],
+			config: {}
+		};
+	}
 	return _db;
 }
 
-function migrate(db: Database.Database): void {
-	db.exec(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      id          TEXT PRIMARY KEY,
-      name        TEXT NOT NULL,
-      provider    TEXT NOT NULL DEFAULT 'gemini',
-      model       TEXT NOT NULL DEFAULT 'gemini-1.5-flash',
-      created_at  INTEGER NOT NULL,
-      updated_at  INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS messages (
-      id          TEXT PRIMARY KEY,
-      session_id  TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-      role        TEXT NOT NULL CHECK(role IN ('user','assistant','system')),
-      content     TEXT NOT NULL,
-      created_at  INTEGER NOT NULL,
-      tokens      INTEGER DEFAULT 0
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, created_at);
-
-    CREATE TABLE IF NOT EXISTS quota (
-      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-      provider            TEXT NOT NULL,
-      model               TEXT NOT NULL,
-      prompt_tokens       INTEGER DEFAULT 0,
-      completion_tokens   INTEGER DEFAULT 0,
-      reasoning_tokens    INTEGER DEFAULT 0,
-      requests            INTEGER DEFAULT 0,
-      date                TEXT NOT NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_quota_date ON quota(date, provider);
-
-    CREATE TABLE IF NOT EXISTS config (
-      key   TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-  `);
-
-	// Ensure reasoning_tokens column exists (for older DBs)
+function saveDb(): void {
+	if (!_db) return;
+	const path = PATHS.db.replace('.db', '.json');
 	try {
-		db.prepare(
-			'ALTER TABLE quota ADD COLUMN reasoning_tokens INTEGER DEFAULT 0',
-		).run();
+		fs.writeFileSync(path, JSON.stringify(_db, null, 2), 'utf8');
 	} catch (e) {
-		// Ignore if already exists
+		logger.error('Failed to save JSON DB', e);
 	}
-
-	logger.info('DB migrations applied');
 }
 
-// ── Config helpers ────────────────────────────────────────────────────────────
+// ── Session Helpers ──────────────────────────────────────────────────────────
+
+export function getAllSessions(): Session[] {
+	const db = loadDb();
+	return [...db.sessions].sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export function getSession(id: string): Session | undefined {
+	const db = loadDb();
+	return db.sessions.find(s => s.id === id);
+}
+
+export function insertSession(session: Session, messages: ChatMessage[]): void {
+	const db = loadDb();
+	db.sessions.push(session);
+	db.messages[session.id] = messages;
+	saveDb();
+}
+
+export function deleteSession(id: string): void {
+	const db = loadDb();
+	db.sessions = db.sessions.filter(s => s.id !== id);
+	delete db.messages[id];
+	saveDb();
+}
+
+export function getMessages(sessionId: string): ChatMessage[] {
+	const db = loadDb();
+	return db.messages[sessionId] || [];
+}
+
+// ── Quota Helpers ────────────────────────────────────────────────────────────
+
+export function getQuota(date: string, provider: Provider): QuotaRecord | undefined {
+	const db = loadDb();
+	return db.quota.find(q => q.date === date && q.provider === provider);
+}
+
+export function upsertQuota(record: QuotaRecord): void {
+	const db = loadDb();
+	const idx = db.quota.findIndex(q => q.date === record.date && q.provider === record.provider && q.model === record.model);
+	if (idx >= 0) {
+		db.quota[idx] = record;
+	} else {
+		db.quota.push(record);
+	}
+	saveDb();
+}
+
+export function getAllQuota(): QuotaRecord[] {
+	const db = loadDb();
+	return [...db.quota];
+}
+
+// ── Config Helpers ────────────────────────────────────────────────────────────
 
 export function getConfig(key: string, fallback?: string): string | undefined {
-	const db = getDb();
-	const row = db.prepare('SELECT value FROM config WHERE key = ?').get(key) as
-		| {value: string}
-		| undefined;
-	return row?.value ?? fallback;
+	const db = loadDb();
+	return db.config[key] ?? fallback;
 }
 
 export function setConfig(key: string, value: string): void {
-	const db = getDb();
-	db.prepare('INSERT OR REPLACE INTO config(key, value) VALUES (?, ?)').run(
-		key,
-		value,
-	);
+	const db = loadDb();
+	db.config[key] = value;
+	saveDb();
+}
+
+// Legacy export for app.tsx startup check
+export function getDb(): any {
+	return loadDb();
 }
