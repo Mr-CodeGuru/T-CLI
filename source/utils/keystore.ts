@@ -58,10 +58,8 @@ export function writeEnvFile(vars: Record<string, string>): void {
 // ── Provider key helpers ──────────────────────────────────────────────────────
 
 export function getProviderKey(provider: Provider): string | undefined {
-	// Prefer live process.env (set at runtime) over file
-	const envKey = PROVIDER_ENV_KEY[provider];
-	if (process.env[envKey]) return process.env[envKey];
 	const fileVars = readEnvFile();
+	const envKey = PROVIDER_ENV_KEY[provider];
 	return fileVars[envKey];
 }
 
