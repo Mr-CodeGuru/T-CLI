@@ -2,14 +2,13 @@ import React, {useState} from 'react';
 import {ChatInterface} from './components/ChatInterface.js';
 import {SetupWizard} from './components/SetupWizard.js';
 import {ensureDirectories} from './utils/paths.js';
-import {getDb} from './db/index.js';
+import {getDb, setConfig, getConfig} from './db/index.js';
 import {
 	hasAnyProvider,
 	injectEnvIntoProcess,
 	setProviderKey,
 	PROVIDER_ENV_KEY,
 } from './utils/keystore.js';
-import {setConfig} from './db/index.js';
 import {useBackend} from './hooks/useBackend.js';
 import type {Provider} from './types/index.js';
 
@@ -20,11 +19,21 @@ getDb();               // Run DB migrations
 
 // ── Root App ──────────────────────────────────────────────────────────────────
 
+
 export default function App() {
 	const backend = useBackend();
-	const [ready, setReady] = useState<boolean>(() => hasAnyProvider());
-	const [provider, setProvider] = useState<Provider>('openrouter');
-	const [model, setModel] = useState<string>('openrouter/free');
+	
+	// Load saved config from DB
+	const savedProvider = getConfig('provider') as Provider | undefined;
+	const savedModel = getConfig('model');
+
+	// Ready only if we have both a key AND a previously chosen model/provider
+	const [ready, setReady] = useState<boolean>(
+		() => !!savedProvider && !!savedModel && hasAnyProvider()
+	);
+	
+	const [provider, setProvider] = useState<Provider>(savedProvider || 'openrouter');
+	const [model, setModel] = useState<string>(savedModel || '');
 
 	function handleWizardComplete(chosenProvider: Provider, chosenModel: string) {
 		// Persist chosen provider/model to DB config
