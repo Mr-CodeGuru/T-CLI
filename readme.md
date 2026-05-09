@@ -87,18 +87,13 @@ Contributions are what make the open-source community such an amazing place to l
 
 ## 🗑 Uninstallation
 
-To completely remove T-CLI and all associated data from your system, run:
+To completely remove T-CLI and all associated data, run this command:
 
 ```bash
-# Remove the global command
-rm ~/.local/bin/t-cli
-
-# Remove the application source
-rm -rf ~/.t-cli-app
-
-# Remove all persistent data (History, Keys, Logs)
-rm -rf ~/.mycli
+rm -f ~/.local/bin/t-cli; rm -rf ~/.t-cli-app; rm -rf ~/.mycli; rehash
 ```
+
+*Note: If `t-cli` still runs after this, it might be installed in your Node `bin` folder. Run `where t-cli` to find and remove it.*
 
 ---
 
