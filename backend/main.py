@@ -46,8 +46,8 @@ async def handle_chat(req: dict) -> None:
     content = req.get("content", "")
     meta = req.get("meta", {})
 
-    provider = meta.get("provider", "gemini")
-    model = meta.get("model", "gemini-1.5-flash")
+    provider = meta.get("provider", "openrouter")
+    model = meta.get("model", "meta-llama/llama-3.3-70b-instruct")
     history = meta.get("history", [])
 
     # Build message list
