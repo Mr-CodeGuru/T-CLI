@@ -1,0 +1,27 @@
+node_modules/
+dist/
+
+# Environment & secrets — NEVER commit real keys
+.env
+.env.local
+.env.*.local
+
+# Runtime data
+~/.mycli/
+
+# Python
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.venv/
+*.pyc
+*.pyo
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+dist
