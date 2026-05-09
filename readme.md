@@ -85,4 +85,21 @@ Contributions are what make the open-source community such an amazing place to l
 
 ---
 
+## 🗑 Uninstallation
+
+To completely remove T-CLI and all associated data from your system, run:
+
+```bash
+# Remove the global command
+rm ~/.local/bin/t-cli
+
+# Remove the application source
+rm -rf ~/.t-cli-app
+
+# Remove all persistent data (History, Keys, Logs)
+rm -rf ~/.mycli
+```
+
+---
+
 Built with ❤️ by [Mr-CodeGuru](https://github.com/Mr-CodeGuru)
