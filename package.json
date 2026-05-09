@@ -39,6 +39,7 @@
 	},
 	"devDependencies": {
 		"@sindresorhus/tsconfig": "^3.0.1",
+		"@types/node": "^20.0.0",
 		"@types/react": "^18.0.32",
 		"@types/uuid": "^9.0.7",
 		"@vdemedes/prettier-config": "^2.0.1",
