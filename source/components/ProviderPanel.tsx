@@ -178,7 +178,9 @@ export function ProviderPanel({
 						{isCursor && mode === 'list' && (
 							<Box paddingLeft={4} flexDirection="column" gap={0}>
 								<Text color={theme.muted}>
-									Models: {p.models.slice(0, 3).join(' • ')}
+									{p.id === 'local' 
+										? `Model Path: ${getProviderKey('local') || 'Not set'}`
+										: `Models: ${p.models.slice(0, 3).join(' • ')}`}
 								</Text>
 								{!hasKey && (
 									<Text color={theme.warning}>
