@@ -224,12 +224,12 @@ export function ChatInterface({backend}: {backend: any}) {
 						onSwitch={p => {
 							setProviderState(p);
 							setConfig('provider', p);
-							// Auto-reset model to provider's default
-							const defaultModel = MODEL_CATALOG[p as Provider]?.[0]?.id || '';
-							if (defaultModel) {
-								setModelState(defaultModel);
-								setConfig('model', defaultModel);
-							}
+							// Auto-reset model to provider's default to prevent out-of-sync state
+							const defaultModel = p === 'local'
+								? (getProviderKey('local') || 'local-gguf')
+								: (MODEL_CATALOG[p as Provider]?.[0]?.id || 'openrouter/free');
+							setModelState(defaultModel);
+							setConfig('model', defaultModel);
 							setActivePanel('chat');
 						}}
 						onClose={() => setActivePanel('chat')}

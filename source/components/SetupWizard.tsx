@@ -284,11 +284,11 @@ export function SetupWizard({backend, onComplete, isManage = false}: SetupWizard
 					</Box>
 
 					<Text color={C.muted}>
-						{isLocal ? 'Ollama URL' : 'API Key'}: <Text color={C.primary}>{isLocal ? keyValue : (keyValue.slice(0, 8) + '...')}</Text>
+						{isLocal ? 'GGUF File Path' : 'API Key'}: <Text color={C.primary}>{isLocal ? keyValue : (keyValue.slice(0, 8) + '...')}</Text>
 					</Text>
 					<Text color={C.muted}>
 						{isLocal 
-							? 'Enter the model name to use (must be pulled in Ollama):' 
+							? 'Enter the GGUF file path to use:' 
 							: 'Enter the model ID you want to use:'}
 					</Text>
 

@@ -79,12 +79,12 @@ export function ProviderPanel({
 				if (existingKey) {
 					onSwitch(selectedProvider.id);
 				} else {
-					setKeyInput(isLocal ? 'http://localhost:11434' : '');
+					setKeyInput('');
 					setMode('enter-key');
 				}
 			} else if (_input === 'k' || _input === 'K') {
 				// Edit key for selected provider
-				setKeyInput(existingKey ?? (isLocal ? 'http://localhost:11434' : ''));
+				setKeyInput(existingKey ?? '');
 				setMode('enter-key');
 			} else if (_input === 'd' || _input === 'D') {
 				// Delete key (deactivate provider)
@@ -207,13 +207,11 @@ export function ProviderPanel({
 					marginTop={1}
 				>
 					<Text bold color={theme.accent}>
-						{isLocal ? 'Ollama URL' : PROVIDER_KEY_LABEL[selectedProvider.id]}
+						{PROVIDER_KEY_LABEL[selectedProvider.id]}
 					</Text>
-					{!isLocal && (
-						<Text color={theme.muted}>
-							{PROVIDER_KEY_URL[selectedProvider.id]}
-						</Text>
-					)}
+					<Text color={theme.muted}>
+						{PROVIDER_KEY_URL[selectedProvider.id]}
+					</Text>
 					<Box marginTop={1} gap={1}>
 						<Text color={theme.primary}>• </Text>
 						<TextInput
@@ -221,7 +219,7 @@ export function ProviderPanel({
 							onChange={setKeyInput}
 							onSubmit={handleKeySubmit}
 							placeholder={
-								isLocal ? 'http://localhost:11434' : PROVIDER_KEY_PLACEHOLDER[selectedProvider.id]
+								PROVIDER_KEY_PLACEHOLDER[selectedProvider.id]
 							}
 							mask={!isLocal && keyInput.length > 6 ? '•' : undefined}
 						/>
